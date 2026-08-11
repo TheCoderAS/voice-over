@@ -1,64 +1,74 @@
 # Voice Over
 
-An Android app for voice editing and voice changing, built with Flutter.
+An Android app for **voice recording, editing, voice changing, and ultra-realistic text-to-speech**, built with Flutter.
 
-This repository currently contains the project scaffold and CI/release pipeline
-only — feature work comes next.
+## Features
 
-## Project facts
+### 🎙️ Record & Library
+- High-quality recorder with a **live waveform**, timer, and **pause / resume**.
+- **Import** audio files from device storage.
+- Library with waveform **playback**, seek, rename, delete.
+- **Set as ringtone / alarm / notification** from any clip.
 
-| | |
-|---|---|
-| Platform | Android only |
-| Flutter | 3.44.9 (stable) |
-| Dart | 3.12.2 |
-| Application ID | `com.unisync.voiceover` |
-| Min Android version | 7.0 (API 24) |
-| Target / compile SDK | 36 |
-| Toolchain | AGP 9.0.1, Gradle 9.1, Kotlin 2.3.20, JDK 21 |
+### ✂️ Studio — editing
+- **Trim** (waveform range select), **Merge** clips, **Fade** in/out.
+- **Volume** (with dB readout), **Mix** a background track under a voice.
+- **Export / convert**: MP3 / WAV / AAC / M4A, bitrate + sample-rate options.
 
-`minSdk` is pinned to 24 because the audio recording and effects plugins in this
-space generally require it.
+### 🎛️ Studio — voice changer & DSP
+- **Effects**: Chipmunk, Deep, Robot, Alien, Monster, Echo, Male↔Female.
+- **Pitch** shift (±12 semitones, tempo preserved) and **Speed** (0.5–2×, pitch preserved).
+- **Denoise**, **Equalizer** (bass/treble), **Reverb** (Room/Studio/Hall/Cave), **Normalize** (EBU R128).
+- **Soundscape** generator: rain, ocean, wind, and white/pink/brown noise.
+
+All editing/DSP runs **on-device** via FFmpeg (`ffmpeg_kit_flutter_new_audio`).
+
+### 🗣️ Voice — ultra-realistic TTS
+- Natural, human-like speech from text via **ElevenLabs** or **Azure Neural TTS**.
+- **Tones**: sweet, polite, friendly, professional, storyteller, calm.
+- Voices for **English (US/UK/IN)** and **Hindi**, plus each account's full catalogue.
+- **SSML** support (Azure): paste a `<speak>` document for emphasis/pauses/pitch.
+- **Bring your own API key** — stored encrypted on-device; nothing bundled.
+
+Generated speech lands in the Library, so it can be edited and effected like any clip.
 
 ## Getting an installable APK
 
 Every push to `main` publishes a **GitHub Release** with an APK attached — grab
-the latest from the [Releases page](../../releases), copy it to an Android
-device, and install it. You will likely need to allow "install from unknown
-sources" for your browser or file manager.
+the latest from the [Releases page](../../releases) and install it on any
+Android 7.0 (API 24)+ device (allow "install from unknown sources"). Branch/PR
+builds upload a `voice-over-apk` artifact under [Actions](../../actions).
 
-For a build from a branch or pull request, open the CI run under
-[Actions](../../actions) and download the `voice-over-apk` artifact (a zip
-containing the APK). Artifacts are kept for 30 days.
+> **Signing:** release builds use a fixed **testing** key committed at
+> `android/keystore/voiceover-testing.jks`, so updates install over previous
+> builds without an uninstall. Swap in a real Play upload key later via the
+> `VOICEOVER_STORE_FILE` / `_STORE_PASSWORD` / `_KEY_ALIAS` / `_KEY_PASSWORD`
+> environment variables — no code change.
 
-> **Signing:** release builds are signed with a fixed **testing keystore**
-> committed at `android/keystore/voiceover-testing.jks`. Because every build —
-> local and CI — uses the same key, all APKs share one signature and **updates
-> install over previous builds without an uninstall**. It is a testing key, not
-> the Play upload key; its password is intentionally non-secret.
->
-> To sign with a real upload key later, provide these as environment variables
-> (e.g. repository secrets wired into the build step) — they override the
-> testing key with no code change:
->
-> | Variable | Meaning |
-> |---|---|
-> | `VOICEOVER_STORE_FILE` | path to the keystore |
-> | `VOICEOVER_STORE_PASSWORD` | keystore password |
-> | `VOICEOVER_KEY_ALIAS` | key alias |
-> | `VOICEOVER_KEY_PASSWORD` | key password |
->
-> Switching keys changes the signature, so the first install after a key change
-> needs a one-time uninstall.
+## Setting up TTS
+
+Open **Voice → ⚙️**, choose a provider, and paste your key:
+- **ElevenLabs** — API key from elevenlabs.io → Profile → API Keys.
+- **Azure** — Speech resource key + region from the Azure portal.
+
+Generation runs on the provider's servers and uses your account's quota/credits.
+
+## Tech stack
+
+| | |
+|---|---|
+| Flutter / Dart | 3.44.9 stable / 3.12.2 |
+| Application ID | `com.unisync.voiceover` |
+| Min Android | 7.0 (API 24) · target/compile SDK 36 |
+| Toolchain | AGP 8.11, Gradle 8.13, Kotlin 2.1.20, JDK 21 |
+| Audio | `audio_waveforms`, `ffmpeg_kit_flutter_new_audio` |
+| TTS / storage | `http`, `flutter_secure_storage` |
 
 ## Local development
 
-Requires the [Flutter SDK](https://docs.flutter.dev/get-started/install) and the
-Android SDK.
-
 ```bash
 flutter pub get
-flutter run                 # debug build on a connected device or emulator
+flutter run                 # debug build on a device/emulator
 flutter build apk --release # release APK -> build/app/outputs/flutter-apk/
 ```
 
@@ -70,55 +80,28 @@ flutter analyze
 flutter test
 ```
 
-## CI
+## CI / CD
 
-`.github/workflows/ci.yml` runs on every pull request, every push to `main`, and
-on demand via *Run workflow*.
+`.github/workflows/ci.yml` — on every PR and push to `main`:
+1. **Analyze & test** — format check, `flutter analyze`, `flutter test`.
+2. **Build** — release APK uploaded as an artifact.
+3. **Release** — `main` only: tags and publishes a GitHub Release with the APK.
 
-1. **Analyze & test** — `dart format --set-exit-if-changed`, `flutter analyze`,
-   `flutter test`.
-2. **Build release APK** — produces
-   `voice-over-<version>-<run-number>.apk` and uploads it as a workflow
-   artifact. The version name comes from `pubspec.yaml`; the build number (and
-   therefore `versionCode`) is the CI run number, so it always increases.
-3. **Publish release** — `main` only. Creates a `v<version>-<run-number>` tag
-   and GitHub Release with the APK attached.
+`.github/workflows/auto-merge.yml` squash-merges a PR once its CI is fully green
+(label `no-auto-merge` to hold one).
 
-To cut a new version, bump `version:` in `pubspec.yaml`.
+## Known limitations / next steps
 
-### Auto-merge
-
-`.github/workflows/auto-merge.yml` squash-merges a pull request into `main` as
-soon as its CI run is fully green (analyze, test, **and** the APK build). It runs
-off the CI workflow completing, so the merge only happens once the whole pipeline
-has passed.
-
-- Add the label **`no-auto-merge`** to a PR to hold it for a manual merge.
-- Because a merge performed by the built-in `GITHUB_TOKEN` does not re-trigger
-  the `push`-to-`main` workflow, the auto-merge job dispatches CI on `main` after
-  merging — that run builds and publishes the release. A manual merge you do
-  yourself triggers the release the ordinary way, so releases are never
-  duplicated.
-- Auto-merge takes effect only from the copy of the workflow on `main` (a
-  `workflow_run` requirement), so it governs future PRs, not the one that
-  introduces it.
-
-## Layout
-
-```
-lib/main.dart      app entry point and home screen
-test/              widget tests
-android/           Android host project (manifest, Gradle, MainActivity)
-.github/workflows/ CI and release pipeline
-```
+- **Real-time preview** while adjusting a filter isn't implemented; tools render
+  then let you play the result. Live preview would need streaming DSP.
+- **AI voice conversion (RVC)** needs a hosted GPU backend and isn't feasible
+  on-device; it's intentionally out of scope until a service is available.
+- The **soundscape/SFX** set is FFmpeg-generated ambience plus your own imports;
+  a bundled pack of recorded ambiences/SFX would need licensed audio assets.
 
 ## Permissions
 
-Declared in `android/app/src/main/AndroidManifest.xml`:
-
-- `RECORD_AUDIO` — capturing voice
-- `READ_MEDIA_AUDIO` (API 33+) / `READ_EXTERNAL_STORAGE` (API ≤ 32) — importing
-  existing audio files
-
-These are manifest declarations only; runtime permission prompts still need to
-be requested in code once the recording features land.
+- `RECORD_AUDIO` — recording
+- `READ_MEDIA_AUDIO` / `READ_EXTERNAL_STORAGE` — importing audio
+- `INTERNET` — cloud TTS
+- `WRITE_SETTINGS` — setting ringtone / alarm / notification
