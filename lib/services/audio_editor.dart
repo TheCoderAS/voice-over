@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:ffmpeg_kit_flutter_new_audio/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_new_audio/return_code.dart';
 
@@ -8,6 +10,59 @@ class AudioEditorException implements Exception {
   final String message;
   @override
   String toString() => 'AudioEditorException: $message';
+}
+
+/// Voice-changer presets, each mapping to an FFmpeg audio-filter chain.
+enum VoiceEffect {
+  chipmunk,
+  deep,
+  robot,
+  alien,
+  monster,
+  echo,
+  maleToFemale,
+  femaleToMale,
+}
+
+extension VoiceEffectX on VoiceEffect {
+  String get label => switch (this) {
+    VoiceEffect.chipmunk => 'Chipmunk',
+    VoiceEffect.deep => 'Deep voice',
+    VoiceEffect.robot => 'Robot',
+    VoiceEffect.alien => 'Alien',
+    VoiceEffect.monster => 'Monster',
+    VoiceEffect.echo => 'Echo',
+    VoiceEffect.maleToFemale => 'Male → Female',
+    VoiceEffect.femaleToMale => 'Female → Male',
+  };
+
+  /// Short suffix appended to the output's display name.
+  String get suffix => switch (this) {
+    VoiceEffect.chipmunk => 'chipmunk',
+    VoiceEffect.deep => 'deep',
+    VoiceEffect.robot => 'robot',
+    VoiceEffect.alien => 'alien',
+    VoiceEffect.monster => 'monster',
+    VoiceEffect.echo => 'echo',
+    VoiceEffect.maleToFemale => 'female',
+    VoiceEffect.femaleToMale => 'male',
+  };
+
+  /// The FFmpeg `-af` filter chain implementing this effect.
+  String get filter => switch (this) {
+    VoiceEffect.chipmunk => AudioEditor.pitchFilter(7),
+    VoiceEffect.deep => AudioEditor.pitchFilter(-5),
+    VoiceEffect.maleToFemale => AudioEditor.pitchFilter(4),
+    VoiceEffect.femaleToMale => AudioEditor.pitchFilter(-4),
+    VoiceEffect.monster =>
+      '${AudioEditor.pitchFilter(-8)},aecho=0.8:0.88:60:0.4',
+    VoiceEffect.alien => '${AudioEditor.pitchFilter(4)},vibrato=f=6:d=0.7',
+    VoiceEffect.echo => 'aecho=0.8:0.9:1000:0.3',
+    // Classic monotone "robot" via spectral magnitude passthrough.
+    VoiceEffect.robot =>
+      "afftfilt=real='hypot(re,im)*sin(0)':"
+          "imag='hypot(re,im)*cos(0)':win_size=512:overlap=0.75",
+  };
 }
 
 /// Output audio formats the editor can render to.
@@ -67,6 +122,98 @@ class AudioEditor {
 
   static String _sec(Duration d) =>
       (d.inMilliseconds / 1000.0).toStringAsFixed(3);
+
+  static const _baseSampleRate = 44100;
+
+  /// Filter chain that shifts pitch by [semitones] without changing tempo.
+  /// Valid for roughly ±12 semitones (atempo's 0.5–2.0 window).
+  static String pitchFilter(double semitones) {
+    final factor = math.pow(2, semitones / 12).toDouble();
+    final tempo = (1 / factor).toStringAsFixed(6);
+    return 'asetrate=${_baseSampleRate * factor},'
+        'atempo=$tempo,aresample=$_baseSampleRate';
+  }
+
+  /// Decomposes a speed [rate] into a chain of atempo filters, each within the
+  /// filter's supported 0.5–2.0 range.
+  static String _tempoFilter(double rate) {
+    final parts = <String>[];
+    var r = rate;
+    while (r > 2.0) {
+      parts.add('atempo=2.0');
+      r /= 2.0;
+    }
+    while (r < 0.5) {
+      parts.add('atempo=0.5');
+      r /= 0.5;
+    }
+    parts.add('atempo=${r.toStringAsFixed(6)}');
+    return parts.join(',');
+  }
+
+  /// Applies a [VoiceEffect] preset.
+  Future<String> applyEffect({
+    required String inputPath,
+    required VoiceEffect effect,
+    required String outputPath,
+  }) {
+    final args = [
+      '-y',
+      '-i',
+      inputPath,
+      '-af',
+      effect.filter,
+      '-c:a',
+      'aac',
+      '-b:a',
+      _defaultBitrate,
+      outputPath,
+    ];
+    return _run(args, outputPath);
+  }
+
+  /// Shifts pitch by [semitones] (−12…+12) while preserving tempo.
+  Future<String> pitchShift({
+    required String inputPath,
+    required double semitones,
+    required String outputPath,
+  }) {
+    final args = [
+      '-y',
+      '-i',
+      inputPath,
+      '-af',
+      pitchFilter(semitones),
+      '-c:a',
+      'aac',
+      '-b:a',
+      _defaultBitrate,
+      outputPath,
+    ];
+    return _run(args, outputPath);
+  }
+
+  /// Changes playback speed by [rate] (e.g. 0.5 = half, 2.0 = double) while
+  /// preserving pitch.
+  Future<String> changeSpeed({
+    required String inputPath,
+    required double rate,
+    required String outputPath,
+  }) {
+    final args = [
+      '-y',
+      '-i',
+      inputPath,
+      '-af',
+      _tempoFilter(rate),
+      '-c:a',
+      'aac',
+      '-b:a',
+      _defaultBitrate,
+      outputPath,
+    ];
+    return _run(args, outputPath);
+  }
 
   /// Keeps only the audio between [start] and [end].
   Future<String> trim({
