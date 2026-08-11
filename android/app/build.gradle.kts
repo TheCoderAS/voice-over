@@ -32,10 +32,7 @@ val signingProps = Properties().apply {
 
 android {
     namespace = "com.unisync.voiceover"
-    // permission_handler_android requires compiling against SDK 37+. compileSdk
-    // only affects which APIs are available at compile time; targetSdk/minSdk
-    // below are unchanged, so runtime behavior and device support stay the same.
-    compileSdk = 37
+    compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

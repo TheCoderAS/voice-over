@@ -19,8 +19,12 @@ pluginManagement {
 
 plugins {
     id("dev.flutter.flutter-plugin-loader") version "1.0.0"
-    id("com.android.application") version "9.0.1" apply false
-    id("org.jetbrains.kotlin.android") version "2.3.20" apply false
+    // Pinned to the AGP 8.x line: audio_waveforms applies the legacy Kotlin
+    // Gradle Plugin, which AGP 9's built-in Kotlin rejects, while file_picker
+    // needs built-in Kotlin on AGP 9 — mutually exclusive there. On AGP 8 both
+    // build the traditional way.
+    id("com.android.application") version "8.11.1" apply false
+    id("org.jetbrains.kotlin.android") version "2.1.20" apply false
 }
 
 include(":app")
