@@ -142,9 +142,9 @@ jobs:
         run: |
           gh release create "$TAG" dist/*.apk \
             --title "Voice Over $TAG" \
-            --notes "Debug-signed release build of \`${GITHUB_SHA}\`.
+            --notes "Release build of \`${GITHUB_SHA}\`.
 
           Download the \`.apk\` below and install it directly on an Android 7.0 (API 24) or newer device. You may need to allow installs from unknown sources.
 
-          Not signed with an upload key yet, so this build is for testing only — not Play Store distribution." \
+          Signed with the fixed testing key, so updates install over earlier builds without an uninstall. Not the Play upload key — for on-device testing, not Play Store distribution." \
             --latest

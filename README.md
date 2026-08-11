@@ -31,12 +31,25 @@ For a build from a branch or pull request, open the CI run under
 [Actions](../../actions) and download the `voice-over-apk` artifact (a zip
 containing the APK). Artifacts are kept for 30 days.
 
-> **Signing:** release builds are signed with the standard Android **debug**
-> key. That is enough to install and test on a device, but not to publish on
-> Google Play. Swapping in a real upload keystore later means adding the
-> keystore to `android/` (already gitignored), wiring a `signingConfig` in
-> `android/app/build.gradle.kts`, and supplying the credentials as repository
-> secrets.
+> **Signing:** release builds are signed with a fixed **testing keystore**
+> committed at `android/keystore/voiceover-testing.jks`. Because every build —
+> local and CI — uses the same key, all APKs share one signature and **updates
+> install over previous builds without an uninstall**. It is a testing key, not
+> the Play upload key; its password is intentionally non-secret.
+>
+> To sign with a real upload key later, provide these as environment variables
+> (e.g. repository secrets wired into the build step) — they override the
+> testing key with no code change:
+>
+> | Variable | Meaning |
+> |---|---|
+> | `VOICEOVER_STORE_FILE` | path to the keystore |
+> | `VOICEOVER_STORE_PASSWORD` | keystore password |
+> | `VOICEOVER_KEY_ALIAS` | key alias |
+> | `VOICEOVER_KEY_PASSWORD` | key password |
+>
+> Switching keys changes the signature, so the first install after a key change
+> needs a one-time uninstall.
 
 ## Local development
 
