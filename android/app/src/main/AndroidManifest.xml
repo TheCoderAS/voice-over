@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Cloud text-to-speech (ElevenLabs / Azure) needs network access. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <!-- Core capability: capturing voice for editing / effects. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <!-- Importing existing audio files to edit. READ_MEDIA_AUDIO is the API 33+

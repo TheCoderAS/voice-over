@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import 'features/common/coming_soon.dart';
 import 'features/library/library_screen.dart';
 import 'features/record/record_screen.dart';
 import 'features/studio/studio_screen.dart';
+import 'features/tts/voice_screen.dart';
 
 /// Root navigation shell. A [NavigationBar] switches between the app's main
 /// areas; the destinations grow as features land.
@@ -17,26 +17,11 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> {
   int _index = 0;
 
-  static const _voice = ComingSoonScreen(
-    title: 'Voice',
-    icon: Icons.record_voice_over,
-    description:
-        'Ultra-realistic text-to-speech with natural, human-like voices, '
-        'emotional tones, multi-language support and SSML.',
-    planned: [
-      'Natural TTS via ElevenLabs / Azure Neural (bring your own API key)',
-      'Tones: sweet, polite, friendly, professional, storyteller, calm',
-      'Languages & accents: Hindi, English (IN/US/UK), and more',
-      'SSML: emphasis, pauses, pitch control',
-      'Voice library & atmospheric soundscapes',
-    ],
-  );
-
   late final List<Widget> _screens = const [
     RecordScreen(),
     LibraryScreen(),
     StudioScreen(),
-    _voice,
+    VoiceScreen(),
   ];
 
   @override
