@@ -1,0 +1,145 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Cancel superseded runs on the same branch/PR — the newest push is the one
+# that matters.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  FLUTTER_VERSION: "3.44.9"
+  # AGP 9 / Gradle 9.1 need a modern JDK; the app still targets Java 17 bytecode.
+  JAVA_VERSION: "21"
+
+jobs:
+  analyze:
+    name: Analyze & test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Verify formatting
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test
+
+  build:
+    name: Build release APK
+    runs-on: ubuntu-latest
+    needs: analyze
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('android/**/*.gradle*', 'android/**/gradle-wrapper.properties') }}
+          restore-keys: gradle-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Resolve version
+        id: version
+        run: |
+          # `version: 1.2.3+45` in pubspec.yaml -> name 1.2.3. The build number is
+          # the CI run number so every APK has a distinct, increasing versionCode.
+          version_name="$(grep -m1 '^version:' pubspec.yaml | sed -E 's/^version:[[:space:]]*//' | cut -d+ -f1)"
+          echo "name=${version_name}" >> "$GITHUB_OUTPUT"
+          echo "build=${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+          # '+' is legal in a git ref but round-trips badly through URLs, so the
+          # tag uses a '-' separator.
+          echo "tag=v${version_name}-${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+
+      - name: Build APK
+        run: |
+          flutter build apk --release \
+            --build-name="${{ steps.version.outputs.name }}" \
+            --build-number="${{ steps.version.outputs.build }}"
+
+      - name: Stage APK
+        run: |
+          mkdir -p dist
+          cp build/app/outputs/flutter-apk/app-release.apk \
+             "dist/voice-over-${{ steps.version.outputs.name }}-${{ steps.version.outputs.build }}.apk"
+          ls -lh dist
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: voice-over-apk
+          path: dist/*.apk
+          if-no-files-found: error
+          retention-days: 30
+
+    outputs:
+      version_name: ${{ steps.version.outputs.name }}
+      version_build: ${{ steps.version.outputs.build }}
+      tag: ${{ steps.version.outputs.tag }}
+
+  release:
+    name: Publish release
+    runs-on: ubuntu-latest
+    needs: build
+    # Only publish from main, and never from a fork's PR.
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: voice-over-apk
+          path: dist
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.build.outputs.tag }}
+        run: |
+          gh release create "$TAG" dist/*.apk \
+            --title "Voice Over $TAG" \
+            --notes "Debug-signed release build of \`${GITHUB_SHA}\`.
+
+          Download the \`.apk\` below and install it directly on an Android 7.0 (API 24) or newer device. You may need to allow installs from unknown sources.
+
+          Not signed with an upload key yet, so this build is for testing only — not Play Store distribution." \
+            --latest
