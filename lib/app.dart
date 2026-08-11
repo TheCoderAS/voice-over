@@ -1,0 +1,90 @@
+import 'package:flutter/material.dart';
+
+import 'features/common/coming_soon.dart';
+import 'features/library/library_screen.dart';
+import 'features/record/record_screen.dart';
+
+/// Root navigation shell. A [NavigationBar] switches between the app's main
+/// areas; the destinations grow as features land.
+class HomeShell extends StatefulWidget {
+  const HomeShell({super.key});
+
+  @override
+  State<HomeShell> createState() => _HomeShellState();
+}
+
+class _HomeShellState extends State<HomeShell> {
+  int _index = 0;
+
+  static const _studio = ComingSoonScreen(
+    title: 'Studio',
+    icon: Icons.tune,
+    description:
+        'On-device editing and voice effects. Trim, merge, mix, fades, '
+        'pitch & speed, plus voice-changer presets.',
+    planned: [
+      'Trim, cut & crop',
+      'Merge / join clips',
+      'Multi-track mixing with per-track volume',
+      'Fade in / out',
+      'Voice changer: robot, alien, chipmunk, deep, echo…',
+      'Pitch shift & time stretch',
+      'Noise reduction, EQ, reverb, normalize',
+    ],
+  );
+
+  static const _voice = ComingSoonScreen(
+    title: 'Voice',
+    icon: Icons.record_voice_over,
+    description:
+        'Ultra-realistic text-to-speech with natural, human-like voices, '
+        'emotional tones, multi-language support and SSML.',
+    planned: [
+      'Natural TTS via ElevenLabs / Azure Neural (bring your own API key)',
+      'Tones: sweet, polite, friendly, professional, storyteller, calm',
+      'Languages & accents: Hindi, English (IN/US/UK), and more',
+      'SSML: emphasis, pauses, pitch control',
+      'Voice library & atmospheric soundscapes',
+    ],
+  );
+
+  late final List<Widget> _screens = const [
+    RecordScreen(),
+    LibraryScreen(),
+    _studio,
+    _voice,
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: IndexedStack(index: _index, children: _screens),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _index,
+        onDestinationSelected: (i) => setState(() => _index = i),
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.mic_none),
+            selectedIcon: Icon(Icons.mic),
+            label: 'Record',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.library_music_outlined),
+            selectedIcon: Icon(Icons.library_music),
+            label: 'Library',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.tune_outlined),
+            selectedIcon: Icon(Icons.tune),
+            label: 'Studio',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.record_voice_over_outlined),
+            selectedIcon: Icon(Icons.record_voice_over),
+            label: 'Voice',
+          ),
+        ],
+      ),
+    );
+  }
+}
