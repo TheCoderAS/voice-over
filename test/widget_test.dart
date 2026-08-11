@@ -1,5 +1,5 @@
-// Basic smoke test for the app shell. It exists mainly so `flutter test` in CI
-// has something real to run; replace it as actual features land.
+// Smoke test for the app shell: it boots to the Record tab and shows the
+// bottom navigation. Replace/extend as features land.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -7,13 +7,20 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:voice_over/main.dart';
 
 void main() {
-  testWidgets('app boots and shows the home screen', (
+  testWidgets('app boots to the Record tab with navigation', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(const VoiceOverApp());
+    await tester.pump();
 
-    expect(find.byType(HomePage), findsOneWidget);
-    expect(find.text('Voice Over'), findsWidgets);
-    expect(find.byIcon(Icons.graphic_eq), findsOneWidget);
+    // Bottom navigation is present with the main destinations.
+    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.text('Record'), findsWidgets);
+    expect(find.text('Library'), findsWidgets);
+    expect(find.text('Studio'), findsWidgets);
+    expect(find.text('Voice'), findsWidgets);
+
+    // Record tab shows its ready state.
+    expect(find.text('Ready to record'), findsOneWidget);
   });
 }
