@@ -65,6 +65,25 @@ extension VoiceEffectX on VoiceEffect {
   };
 }
 
+/// Reverb spaces, approximated with echo/delay chains.
+enum ReverbPreset { room, studio, hall, cave }
+
+extension ReverbPresetX on ReverbPreset {
+  String get label => switch (this) {
+    ReverbPreset.room => 'Room',
+    ReverbPreset.studio => 'Studio',
+    ReverbPreset.hall => 'Hall',
+    ReverbPreset.cave => 'Cave',
+  };
+
+  String get filter => switch (this) {
+    ReverbPreset.room => 'aecho=0.8:0.9:40:0.25',
+    ReverbPreset.studio => 'aecho=0.8:0.9:60:0.35',
+    ReverbPreset.hall => 'aecho=0.85:0.9:500|700:0.4|0.3',
+    ReverbPreset.cave => 'aecho=0.85:0.88:900|1200:0.5|0.4',
+  };
+}
+
 /// Output audio formats the editor can render to.
 enum AudioFormat { m4a, mp3, wav, aac }
 
@@ -376,6 +395,99 @@ class AudioEditor {
       args.addAll(['-b:a', bitrate]);
     }
     args.add(outputPath);
+    return _run(args, outputPath);
+  }
+
+  /// Reduces steady background noise (fan, hum, hiss) with an FFT denoiser.
+  Future<String> reduceNoise({
+    required String inputPath,
+    required String outputPath,
+  }) {
+    final args = [
+      '-y',
+      '-i',
+      inputPath,
+      '-af',
+      'afftdn=nf=-25',
+      '-c:a',
+      'aac',
+      '-b:a',
+      _defaultBitrate,
+      outputPath,
+    ];
+    return _run(args, outputPath);
+  }
+
+  /// Normalizes perceived loudness to a broadcast target (EBU R128).
+  Future<String> normalize({
+    required String inputPath,
+    required String outputPath,
+  }) {
+    final args = [
+      '-y',
+      '-i',
+      inputPath,
+      '-af',
+      'loudnorm=I=-16:TP=-1.5:LRA=11',
+      '-c:a',
+      'aac',
+      '-b:a',
+      _defaultBitrate,
+      outputPath,
+    ];
+    return _run(args, outputPath);
+  }
+
+  /// Bass/treble shelving EQ, each gain in dB (roughly -15…+15).
+  Future<String> equalize({
+    required String inputPath,
+    required double bassGain,
+    required double trebleGain,
+    required String outputPath,
+  }) {
+    final filters = <String>[];
+    if (bassGain.abs() >= 0.1) {
+      filters.add('bass=g=${bassGain.toStringAsFixed(1)}');
+    }
+    if (trebleGain.abs() >= 0.1) {
+      filters.add('treble=g=${trebleGain.toStringAsFixed(1)}');
+    }
+    if (filters.isEmpty) {
+      throw AudioEditorException('Set a bass or treble adjustment first.');
+    }
+    final args = [
+      '-y',
+      '-i',
+      inputPath,
+      '-af',
+      filters.join(','),
+      '-c:a',
+      'aac',
+      '-b:a',
+      _defaultBitrate,
+      outputPath,
+    ];
+    return _run(args, outputPath);
+  }
+
+  /// Applies a reverb [preset].
+  Future<String> reverb({
+    required String inputPath,
+    required ReverbPreset preset,
+    required String outputPath,
+  }) {
+    final args = [
+      '-y',
+      '-i',
+      inputPath,
+      '-af',
+      preset.filter,
+      '-c:a',
+      'aac',
+      '-b:a',
+      _defaultBitrate,
+      outputPath,
+    ];
     return _run(args, outputPath);
   }
 }
