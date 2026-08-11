@@ -12,3 +12,8 @@ GeneratedPluginRegistrant.java
 key.properties
 **/*.keystore
 **/*.jks
+
+# Exception: the non-production TESTING keystore is committed on purpose so
+# every build shares one signature and app updates install in place. This is
+# never the Play upload key — that stays ignored by the rules above.
+!keystore/voiceover-testing.jks
