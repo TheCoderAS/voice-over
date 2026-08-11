@@ -4,11 +4,14 @@ import 'package:provider/provider.dart';
 import '../../data/recording_store.dart';
 import '../../models/recording.dart';
 import 'tools/effects_tool.dart';
+import 'tools/equalizer_tool.dart';
 import 'tools/export_tool.dart';
 import 'tools/fade_tool.dart';
 import 'tools/merge_tool.dart';
 import 'tools/mix_tool.dart';
+import 'tools/one_shot_tool.dart';
 import 'tools/pitch_tool.dart';
+import 'tools/reverb_tool.dart';
 import 'tools/speed_tool.dart';
 import 'tools/trim_tool.dart';
 import 'tools/volume_tool.dart';
@@ -86,6 +89,59 @@ class StudioScreen extends StatelessWidget {
         description: 'Louder or quieter',
         onTap: () =>
             _openForRecording(context, (r) => VolumeTool(recording: r)),
+      ),
+      _ToolCard(
+        icon: Icons.cleaning_services,
+        label: 'Denoise',
+        description: 'Reduce background noise',
+        onTap: () => _openForRecording(
+          context,
+          (r) => OneShotTool(
+            recording: r,
+            title: 'Noise reduction',
+            description:
+                'Removes steady background noise like fan, hum, or hiss.',
+            busyLabel: 'Cleaning up…',
+            buttonLabel: 'Reduce noise & save',
+            icon: Icons.cleaning_services,
+            suffix: 'denoise',
+            run: (editor, input, output) =>
+                editor.reduceNoise(inputPath: input, outputPath: output),
+          ),
+        ),
+      ),
+      _ToolCard(
+        icon: Icons.equalizer,
+        label: 'Equalizer',
+        description: 'Bass & treble',
+        onTap: () =>
+            _openForRecording(context, (r) => EqualizerTool(recording: r)),
+      ),
+      _ToolCard(
+        icon: Icons.surround_sound,
+        label: 'Reverb',
+        description: 'Room, hall, cave…',
+        onTap: () =>
+            _openForRecording(context, (r) => ReverbTool(recording: r)),
+      ),
+      _ToolCard(
+        icon: Icons.equalizer_rounded,
+        label: 'Normalize',
+        description: 'Balance loudness',
+        onTap: () => _openForRecording(
+          context,
+          (r) => OneShotTool(
+            recording: r,
+            title: 'Normalize',
+            description: 'Balances the overall loudness to a consistent level.',
+            busyLabel: 'Normalizing…',
+            buttonLabel: 'Normalize & save',
+            icon: Icons.equalizer_rounded,
+            suffix: 'normalized',
+            run: (editor, input, output) =>
+                editor.normalize(inputPath: input, outputPath: output),
+          ),
+        ),
       ),
       _ToolCard(
         icon: Icons.save_alt,
