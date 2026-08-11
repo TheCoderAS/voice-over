@@ -117,8 +117,13 @@ jobs:
     name: Publish release
     runs-on: ubuntu-latest
     needs: build
-    # Only publish from main, and never from a fork's PR.
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    # Publish only from main. A human merge arrives as a `push`; an auto-merge
+    # (see auto-merge.yml) merges with GITHUB_TOKEN — which suppresses the push
+    # event — and then dispatches this workflow, so accept workflow_dispatch too.
+    # The two paths are mutually exclusive per merge, so releases never double up.
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     permissions:
       contents: write
     steps:

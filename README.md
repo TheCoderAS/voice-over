@@ -68,10 +68,27 @@ on demand via *Run workflow*.
    `voice-over-<version>-<run-number>.apk` and uploads it as a workflow
    artifact. The version name comes from `pubspec.yaml`; the build number (and
    therefore `versionCode`) is the CI run number, so it always increases.
-3. **Publish release** — `main` pushes only. Creates a `v<version>-<run-number>`
-   tag and GitHub Release with the APK attached.
+3. **Publish release** — `main` only. Creates a `v<version>-<run-number>` tag
+   and GitHub Release with the APK attached.
 
 To cut a new version, bump `version:` in `pubspec.yaml`.
+
+### Auto-merge
+
+`.github/workflows/auto-merge.yml` squash-merges a pull request into `main` as
+soon as its CI run is fully green (analyze, test, **and** the APK build). It runs
+off the CI workflow completing, so the merge only happens once the whole pipeline
+has passed.
+
+- Add the label **`no-auto-merge`** to a PR to hold it for a manual merge.
+- Because a merge performed by the built-in `GITHUB_TOKEN` does not re-trigger
+  the `push`-to-`main` workflow, the auto-merge job dispatches CI on `main` after
+  merging — that run builds and publishes the release. A manual merge you do
+  yourself triggers the release the ordinary way, so releases are never
+  duplicated.
+- Auto-merge takes effect only from the copy of the workflow on `main` (a
+  `workflow_run` requirement), so it governs future PRs, not the one that
+  introduces it.
 
 ## Layout
 

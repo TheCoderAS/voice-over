@@ -1,0 +1,70 @@
+name: Auto-merge
+
+# Squash-merges a pull request into main as soon as its CI run goes green.
+#
+# This fires on the CI workflow completing rather than on the PR itself, so the
+# gate is "the whole CI pipeline (analyze, test, and the APK build) succeeded" —
+# not just that a PR was opened.
+#
+# `workflow_run` workflows only ever run from the copy on the default branch, so
+# this takes effect once it lands on main and applies to every future PR.
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+
+# contents/pull-requests: perform the merge. actions: dispatch CI on main after
+# merging (see the release note below).
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+jobs:
+  auto-merge:
+    name: Merge green PR
+    runs-on: ubuntu-latest
+    # Only act on a successful CI run that was itself triggered by a pull request.
+    # CI runs on main (push or workflow_dispatch) also complete here, but their
+    # event is not `pull_request`, so they fall through and do nothing.
+    if: >-
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.conclusion == 'success'
+    steps:
+      - name: Merge the PR whose CI just passed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          set -euo pipefail
+
+          owner="${REPO%/*}"
+
+          # Find the open PR whose head is exactly the commit that just passed CI.
+          pr="$(gh api "repos/$REPO/pulls?state=open&head=$owner:$HEAD_BRANCH" \
+                  --jq ".[] | select(.head.sha==\"$HEAD_SHA\") | .number" | head -n1)"
+
+          if [ -z "$pr" ]; then
+            echo "No open PR matches $HEAD_BRANCH@$HEAD_SHA — nothing to merge."
+            exit 0
+          fi
+
+          # Opt-out valve: label a PR 'no-auto-merge' to hold it for a manual merge.
+          if gh api "repos/$REPO/issues/$pr/labels" --jq '.[].name' \
+               | grep -qx 'no-auto-merge'; then
+            echo "PR #$pr carries the no-auto-merge label — skipping."
+            exit 0
+          fi
+
+          echo "Squash-merging PR #$pr ($HEAD_BRANCH@$HEAD_SHA)."
+          gh pr merge "$pr" --repo "$REPO" --squash --delete-branch
+
+          # A merge made with GITHUB_TOKEN does not emit a push event, so the CI
+          # workflow's push-to-main trigger stays silent and no release would be
+          # cut. workflow_dispatch by GITHUB_TOKEN *is* allowed to start a run, so
+          # kick CI on main explicitly — that run builds and publishes the APK.
+          echo "Dispatching CI on main to build and publish the release."
+          gh workflow run ci.yml --repo "$REPO" --ref main
