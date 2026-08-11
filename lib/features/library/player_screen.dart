@@ -1,10 +1,12 @@
 import 'package:audio_waveforms/audio_waveforms.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/formatting.dart';
 import '../../data/recording_store.dart';
 import '../../models/recording.dart';
+import '../../services/ringtone_service.dart';
 
 /// Playback screen for a single recording: seekable waveform, transport
 /// controls, and rename / delete.
@@ -94,6 +96,56 @@ class _PlayerScreenState extends State<PlayerScreen> {
     );
   }
 
+  Future<void> _setAs() async {
+    final type = await showModalBottomSheet<RingtoneType>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const ListTile(
+              title: Text('Set as…'),
+              subtitle: Text('Use this clip as a system sound'),
+            ),
+            for (final type in RingtoneType.values)
+              ListTile(
+                leading: Icon(switch (type) {
+                  RingtoneType.ringtone => Icons.phone_in_talk,
+                  RingtoneType.alarm => Icons.alarm,
+                  RingtoneType.notification => Icons.notifications,
+                }),
+                title: Text(type.label),
+                onTap: () => Navigator.pop(context, type),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (type == null || !mounted) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final result = await RingtoneService.setAs(_recording.path, type);
+      messenger.hideCurrentSnackBar();
+      if (result == RingtoneResult.ok) {
+        messenger.showSnackBar(
+          SnackBar(content: Text('Set as ${type.label.toLowerCase()}')),
+        );
+      } else {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('Grant "Modify system settings", then try again.'),
+          ),
+        );
+      }
+    } on PlatformException catch (e) {
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text('Could not set: ${e.message}')));
+    }
+  }
+
   Future<void> _delete() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -132,6 +184,11 @@ class _PlayerScreenState extends State<PlayerScreen> {
       appBar: AppBar(
         title: Text(_recording.displayName, overflow: TextOverflow.ellipsis),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.ring_volume_outlined),
+            tooltip: 'Set as ringtone / alarm / notification',
+            onPressed: _setAs,
+          ),
           IconButton(
             icon: const Icon(Icons.edit_outlined),
             tooltip: 'Rename',

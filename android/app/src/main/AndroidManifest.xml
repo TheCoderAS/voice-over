@@ -9,6 +9,14 @@
     <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32"/>
+    <!-- Setting a processed clip as the default ringtone / alarm / notification.
+         WRITE_SETTINGS is a special permission the user grants in a system
+         screen; WRITE_EXTERNAL_STORAGE only applies to publishing the media
+         file on pre-scoped-storage devices (API <= 28). -->
+    <uses-permission android:name="android.permission.WRITE_SETTINGS"/>
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28"/>
 
     <uses-feature
         android:name="android.hardware.microphone"
