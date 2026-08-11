@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'features/common/coming_soon.dart';
 import 'features/library/library_screen.dart';
 import 'features/record/record_screen.dart';
+import 'features/studio/studio_screen.dart';
 
 /// Root navigation shell. A [NavigationBar] switches between the app's main
 /// areas; the destinations grow as features land.
@@ -15,23 +16,6 @@ class HomeShell extends StatefulWidget {
 
 class _HomeShellState extends State<HomeShell> {
   int _index = 0;
-
-  static const _studio = ComingSoonScreen(
-    title: 'Studio',
-    icon: Icons.tune,
-    description:
-        'On-device editing and voice effects. Trim, merge, mix, fades, '
-        'pitch & speed, plus voice-changer presets.',
-    planned: [
-      'Trim, cut & crop',
-      'Merge / join clips',
-      'Multi-track mixing with per-track volume',
-      'Fade in / out',
-      'Voice changer: robot, alien, chipmunk, deep, echo…',
-      'Pitch shift & time stretch',
-      'Noise reduction, EQ, reverb, normalize',
-    ],
-  );
 
   static const _voice = ComingSoonScreen(
     title: 'Voice',
@@ -51,7 +35,7 @@ class _HomeShellState extends State<HomeShell> {
   late final List<Widget> _screens = const [
     RecordScreen(),
     LibraryScreen(),
-    _studio,
+    StudioScreen(),
     _voice,
   ];
 
