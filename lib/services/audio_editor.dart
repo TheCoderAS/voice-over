@@ -84,6 +84,48 @@ extension ReverbPresetX on ReverbPreset {
   };
 }
 
+/// Synthesised atmospheric ambiences, generated on-device with FFmpeg's noise
+/// sources — no bundled audio assets.
+enum Ambience { rain, ocean, wind, whiteNoise, pinkNoise, brownNoise }
+
+extension AmbienceX on Ambience {
+  String get label => switch (this) {
+    Ambience.rain => 'Rain',
+    Ambience.ocean => 'Ocean waves',
+    Ambience.wind => 'Wind',
+    Ambience.whiteNoise => 'White noise',
+    Ambience.pinkNoise => 'Pink noise',
+    Ambience.brownNoise => 'Brown noise',
+  };
+
+  String get suffix => switch (this) {
+    Ambience.rain => 'rain',
+    Ambience.ocean => 'ocean',
+    Ambience.wind => 'wind',
+    Ambience.whiteNoise => 'white-noise',
+    Ambience.pinkNoise => 'pink-noise',
+    Ambience.brownNoise => 'brown-noise',
+  };
+
+  /// lavfi noise-source colour.
+  String get _color => switch (this) {
+    Ambience.rain || Ambience.pinkNoise => 'pink',
+    Ambience.ocean || Ambience.wind || Ambience.brownNoise => 'brown',
+    Ambience.whiteNoise => 'white',
+  };
+
+  /// Shaping filter applied to the raw noise.
+  String get _shape => switch (this) {
+    Ambience.rain => 'lowpass=f=6000,volume=0.6',
+    Ambience.ocean => 'lowpass=f=1200,tremolo=f=0.08:d=0.8,volume=0.9',
+    Ambience.wind =>
+      'bandpass=f=400:width_type=h:w=300,tremolo=f=0.2:d=0.6,volume=0.8',
+    Ambience.whiteNoise ||
+    Ambience.pinkNoise ||
+    Ambience.brownNoise => 'volume=0.5',
+  };
+}
+
 /// Output audio formats the editor can render to.
 enum AudioFormat { m4a, mp3, wav, aac }
 
@@ -482,6 +524,32 @@ class AudioEditor {
       inputPath,
       '-af',
       preset.filter,
+      '-c:a',
+      'aac',
+      '-b:a',
+      _defaultBitrate,
+      outputPath,
+    ];
+    return _run(args, outputPath);
+  }
+
+  /// Generates an atmospheric [ambience] of [duration] as a new audio file.
+  Future<String> generateAmbience({
+    required Ambience ambience,
+    required Duration duration,
+    required String outputPath,
+  }) {
+    final seconds = (duration.inMilliseconds / 1000.0).toStringAsFixed(1);
+    final source =
+        'anoisesrc=color=${ambience._color}:d=$seconds:r=$_baseSampleRate';
+    final args = [
+      '-y',
+      '-f',
+      'lavfi',
+      '-i',
+      source,
+      '-af',
+      ambience._shape,
       '-c:a',
       'aac',
       '-b:a',
