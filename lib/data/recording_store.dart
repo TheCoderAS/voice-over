@@ -55,6 +55,16 @@ class RecordingStore extends ChangeNotifier {
     return p.join(dir.path, 'rec_$stamp.$extension');
   }
 
+  /// Path for an edited/processed output file (trim, merge, export, effects…).
+  Future<String> newOutputPath({
+    required String extension,
+    String prefix = 'edit',
+  }) async {
+    final dir = await _ensureDir();
+    final stamp = DateTime.now().millisecondsSinceEpoch;
+    return p.join(dir.path, '${prefix}_$stamp.$extension');
+  }
+
   Future<void> init() async {
     final dir = await _ensureDir();
 
@@ -121,6 +131,24 @@ class RecordingStore extends ChangeNotifier {
       file,
       displayName: displayName,
       durationMs: duration.inMilliseconds,
+    );
+    _recordings.insert(0, rec);
+    notifyListeners();
+    await _persist();
+    return rec;
+  }
+
+  /// Registers a file produced by the editor (already written to [path] inside
+  /// the recordings directory), probing its duration.
+  Future<Recording> addProcessedFile({
+    required String path,
+    required String displayName,
+  }) async {
+    final durationMs = await _probeDurationMs(path);
+    final rec = Recording.fromFile(
+      File(path),
+      displayName: displayName,
+      durationMs: durationMs,
     );
     _recordings.insert(0, rec);
     notifyListeners();
