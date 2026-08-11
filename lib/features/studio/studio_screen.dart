@@ -3,10 +3,13 @@ import 'package:provider/provider.dart';
 
 import '../../data/recording_store.dart';
 import '../../models/recording.dart';
+import 'tools/effects_tool.dart';
 import 'tools/export_tool.dart';
 import 'tools/fade_tool.dart';
 import 'tools/merge_tool.dart';
 import 'tools/mix_tool.dart';
+import 'tools/pitch_tool.dart';
+import 'tools/speed_tool.dart';
 import 'tools/trim_tool.dart';
 import 'tools/volume_tool.dart';
 import 'widgets/recording_picker.dart';
@@ -39,6 +42,25 @@ class StudioScreen extends StatelessWidget {
         label: 'Trim',
         description: 'Cut to a selection',
         onTap: () => _openForRecording(context, (r) => TrimTool(recording: r)),
+      ),
+      _ToolCard(
+        icon: Icons.auto_awesome,
+        label: 'Effects',
+        description: 'Robot, alien, deep…',
+        onTap: () =>
+            _openForRecording(context, (r) => EffectsTool(recording: r)),
+      ),
+      _ToolCard(
+        icon: Icons.tune,
+        label: 'Pitch',
+        description: 'Shift up / down',
+        onTap: () => _openForRecording(context, (r) => PitchTool(recording: r)),
+      ),
+      _ToolCard(
+        icon: Icons.speed,
+        label: 'Speed',
+        description: 'Faster / slower',
+        onTap: () => _openForRecording(context, (r) => SpeedTool(recording: r)),
       ),
       _ToolCard(
         icon: Icons.merge,
