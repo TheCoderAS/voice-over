@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
-import '../../data/recording_store.dart';
 import '../../models/recording.dart';
 import 'tools/effects_tool.dart';
 import 'tools/equalizer_tool.dart';
@@ -12,6 +10,7 @@ import 'tools/mix_tool.dart';
 import 'tools/one_shot_tool.dart';
 import 'tools/pitch_tool.dart';
 import 'tools/reverb_tool.dart';
+import 'tools/soundscape_tool.dart';
 import 'tools/speed_tool.dart';
 import 'tools/trim_tool.dart';
 import 'tools/volume_tool.dart';
@@ -37,8 +36,6 @@ class StudioScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasRecordings = context.watch<RecordingStore>().recordings.isNotEmpty;
-
     final tools = <_ToolCard>[
       _ToolCard(
         icon: Icons.content_cut,
@@ -144,6 +141,12 @@ class StudioScreen extends StatelessWidget {
         ),
       ),
       _ToolCard(
+        icon: Icons.landscape,
+        label: 'Soundscape',
+        description: 'Rain, ocean, wind…',
+        onTap: () => _open(context, const SoundscapeTool()),
+      ),
+      _ToolCard(
         icon: Icons.save_alt,
         label: 'Export',
         description: 'Convert format & quality',
@@ -154,16 +157,14 @@ class StudioScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Studio')),
-      body: hasRecordings
-          ? GridView.count(
-              padding: const EdgeInsets.all(16),
-              crossAxisCount: 2,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              childAspectRatio: 1.1,
-              children: tools,
-            )
-          : const _NeedRecordings(),
+      body: GridView.count(
+        padding: const EdgeInsets.all(16),
+        crossAxisCount: 2,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        childAspectRatio: 1.1,
+        children: tools,
+      ),
     );
   }
 }
@@ -205,37 +206,6 @@ class _ToolCard extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _NeedRecordings extends StatelessWidget {
-  const _NeedRecordings();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 40),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.tune, size: 72, color: theme.colorScheme.primary),
-            const SizedBox(height: 16),
-            Text('Nothing to edit yet', style: theme.textTheme.titleLarge),
-            const SizedBox(height: 8),
-            Text(
-              'Record or import audio first, then come back to trim, merge, '
-              'mix, fade, adjust volume, and export.',
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
         ),
       ),
     );
